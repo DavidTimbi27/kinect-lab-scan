@@ -1,0 +1,33 @@
+paths:
+  raw: data/raw
+  output: output
+depth:
+  min_mm: 500
+  max_mm: 4000
+  invalid_mm: [0]
+capture:
+  average: 5
+  # Nominal del SDK v1 para profundidad 640x480.
+  depth_intrinsic: {width: 640, height: 480, fx: 571.26, fy: 571.26, cx: 320.0, cy: 240.0}
+registration:
+  voxel_m: 0.045
+  icp_m: 0.09
+  color_weight: 4.0
+  min_fitness: 0.38
+  max_step_m: 0.9
+  max_step_deg: 45
+  max_rmse_m: 0.065
+  loop_fitness: 0.55
+  loop_gap: 5
+  loop_distance_m: 1.5
+  loop_angle_deg: 50
+  loop_correction_m: 0.35
+  loop_correction_deg: 20
+geometry:
+  up_hint_camera: [0, -1, 0]
+  forward_hint_camera: [0, 0, 1]
+  plane_threshold_m: 0.035
+  min_plane_fraction: 0.015
+  max_planes: 24
+  min_room_height_m: 1.8
+  mesh_voxel_m: 0.055

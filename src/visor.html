@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Reconstrucción RGB-D · Visor 3D</title>
+<style>
+:root{color-scheme:dark;background:#0a111a;color:#edf4fa;font-family:system-ui,sans-serif}
+*{box-sizing:border-box}
+body{margin:0}
+main{max-width:1500px;margin:auto;padding:clamp(16px,4vw,52px)}
+header{display:flex;align-items:end;justify-content:space-between;gap:20px;margin-bottom:22px;flex-wrap:wrap}
+h1{font-size:clamp(2rem,4.6vw,3.6rem);letter-spacing:-.055em;line-height:1.03;margin:0 0 10px}
+p{margin:0;color:#b2c3d3;line-height:1.55}
+.accent{color:#76e2cf}
+.viewer{border:1px solid #2c3d4e;border-radius:18px;overflow:hidden;background:#0d1723}
+.toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px;border-bottom:1px solid #2c3d4e;flex-wrap:wrap}
+.views{display:flex;gap:8px;flex-wrap:wrap}
+button{font:inherit;font-size:.9rem;color:#cbdceb;background:#152435;border:1px solid #344a5e;border-radius:8px;padding:9px 13px;cursor:pointer}
+button:hover{background:#20354a}
+button[aria-pressed=true]{background:#193b40;color:#94f2e2;border-color:#459b90}
+button:focus-visible,input:focus-visible{outline:2px solid #88edda;outline-offset:3px}
+label{display:flex;gap:8px;align-items:center;font-size:.9rem;color:#cbdceb;padding-right:6px}
+.settings{display:flex;gap:16px;flex-wrap:wrap}
+input{accent-color:#76e2cf}
+input[type=range]{width:78px}
+#plot{width:100%;height:clamp(390px,64vh,800px)}
+footer{margin-top:16px;display:flex;gap:14px;justify-content:space-between;flex-wrap:wrap}
+footer p{font-size:.94rem}
+#status{padding:16px}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<main>
+<header>
+<div><h1>Reconstrucción <span class="accent">RGB-D</span></h1><p>Nube de puntos coloreada del sector capturado</p></div>
+<p>__CAPTURES__ capturas · __POINTS__ puntos</p>
+</header>
+<section class="viewer" aria-label="Visor interactivo de la reconstrucción">
+<div class="toolbar">
+<div class="views" role="group" aria-label="Vistas predefinidas">
+<button type="button" data-view="oblicua" aria-pressed="true">Oblicua</button>
+<button type="button" data-view="frontal" aria-pressed="false">Frontal</button>
+<button type="button" data-view="lateral" aria-pressed="false">Lateral</button>
+<button type="button" data-view="planta" aria-pressed="false">Planta</button>
+</div>
+<div class="settings">
+<label for="point-size">Tamaño de punto <input type="range" id="point-size" min="1" max="4" step="0.2" value="1.8"></label>
+<label><input type="checkbox" id="axes"> Mostrar ejes en metros</label>
+</div>
+</div>
+<p id="status" role="status">Cargando la nube de puntos…</p>
+<div id="plot" aria-label="Nube de puntos tridimensional en color"></div>
+<noscript><p>Activa JavaScript para usar el visor 3D.</p></noscript>
+</section>
+<footer><p>Arrastra para girar · Usa la rueda o pellizca para acercarte</p><p>Los huecos corresponden a zonas sin datos utilizables.</p></footer>
+</main>
+<script>__PLOTLY_LIBRARY__</script>
+<script>
+const plot = document.getElementById("plot");
+const axes = document.getElementById("axes");
+const size = document.getElementById("point-size");
+const status = document.getElementById("status");
+const buttons = [...document.querySelectorAll("[data-view]")];
+const fig = __FIGURE__;
+const views = {
+  oblicua: {eye:{x:-1.18,y:-1.75,z:.60}},
+  frontal: {eye:{x:0,y:-2.15,z:.15}},
+  lateral: {eye:{x:-2.1,y:-.03,z:.18}},
+  planta: {eye:{x:0,y:0,z:2.1},up:{x:0,y:1,z:0}}
+};
+const camera = name => ({up:{x:0,y:0,z:1},center:{x:0,y:0,z:0},...views[name]});
+fig.layout.scene.camera = camera("oblicua");
+buttons.forEach(button => button.disabled = true);
+axes.disabled = true;
+size.disabled = true;
+const failed = () => {
+  status.hidden = false;
+  status.textContent = "El visor requiere WebGL. Prueba en Edge, Chrome o Firefox con aceleración gráfica.";
+};
+try {
+  Plotly.newPlot(plot,fig.data,fig.layout,{responsive:true,scrollZoom:true,displayModeBar:false})
+    .then(() => {
+      if (!plot.querySelector("canvas")) { failed(); return; }
+      status.hidden = true;
+      buttons.forEach(button => {
+        button.disabled = false;
+        button.addEventListener("click", () => {
+          Plotly.relayout(plot,{"scene.camera":camera(button.dataset.view)});
+          buttons.forEach(option => option.setAttribute("aria-pressed", String(option === button)));
+        });
+      });
+      axes.disabled = false;
+      size.disabled = false;
+      size.addEventListener("input", () => Plotly.restyle(plot, {"marker.size": Number(size.value)}, [0]));
+      axes.addEventListener("change", () => Plotly.relayout(plot,Object.fromEntries(
+        ["x","y","z"].map(axis => ["scene." + axis + "axis.visible", axes.checked]))));
+      plot.addEventListener("pointerdown", () => buttons.forEach(button => button.setAttribute("aria-pressed","false")));
+      document.documentElement.dataset.viewer = "ready";
+    }).catch(failed);
+} catch (error) { failed(); }
+</script>
+</body>
+</html>
